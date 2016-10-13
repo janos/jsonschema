@@ -1,3 +1,8 @@
+// Copyright (c) 2015, 2016 Janoš Guljaš <janos@resenje.org>
+// All rights reserved.
+// Use of this source code is governed by a BSD-style
+// license that can be found in the LICENSE file.
+
 package jsonschema // import "resenje.org/jsonschema"
 
 import (
@@ -26,20 +31,23 @@ var jsonType = map[reflect.Kind]string{
 	reflect.Map:     "object",
 }
 
-type property struct {
+// Property defines a standard json-schema.org Property.
+type Property struct {
 	Description          string              `json:"description,omitempty"`
 	Type                 string              `json:"type,omitempty"`
-	Items                *property           `json:"items,omitempty"`
-	Properties           map[string]property `json:"properties,omitempty"`
+	Items                *Property           `json:"items,omitempty"`
+	Properties           map[string]Property `json:"properties,omitempty"`
 	AdditionalProperties bool                `json:"additionalProperties,omitempty"`
 	Required             []string            `json:"required,omitempty"`
 }
 
+// Schema encapsulates Property and adds a new description field $schema.
 type Schema struct {
 	Schema string `json:"$schema,omitempty"`
-	property
+	Property
 }
 
+// New returns a Schema from a provided interface{}.
 func New(variable interface{}) Schema {
 	d := Schema{
 		Schema: "http://json-schema.org/schema#",
@@ -48,19 +56,19 @@ func New(variable interface{}) Schema {
 	return d
 }
 
-func (p *property) read(t reflect.Type) {
+func (p *Property) read(t reflect.Type) {
 	kind := t.Kind()
 	p.Type = jsonType[kind]
 
 	switch kind {
 	case reflect.Slice:
-		pn := &property{}
+		pn := &Property{}
 		pn.read(t.Elem())
 		p.Items = pn
 	case reflect.Map:
 		if jsType := jsonType[t.Elem().Kind()]; jsType != "" {
-			p.Properties = make(map[string]property, 0)
-			pn := &property{}
+			p.Properties = make(map[string]Property, 0)
+			pn := &Property{}
 			pn.read(t.Elem())
 			p.Properties[".*"] = *pn
 		} else {
@@ -68,7 +76,7 @@ func (p *property) read(t reflect.Type) {
 		}
 	case reflect.Struct:
 		p.Type = "object"
-		p.Properties = make(map[string]property, 0)
+		p.Properties = make(map[string]Property, 0)
 		p.AdditionalProperties = false
 
 		count := t.NumField()
@@ -87,13 +95,13 @@ func (p *property) read(t reflect.Type) {
 				name = field.Name
 			}
 
-			pn := &property{
+			pn := &Property{
 				Description: tags.Get("description"),
 			}
 			pn.read(field.Type)
 			p.Properties[name] = *pn
 
-			if strings.Contains(tags.Get("minion"), "required") {
+			if strings.Contains(tags.Get("jsonschema"), "required") {
 				p.Required = append(p.Required, name)
 			}
 		}
