@@ -67,7 +67,7 @@ func (p *Property) read(t reflect.Type) {
 		p.Items = pn
 	case reflect.Map:
 		if jsType := jsonType[t.Elem().Kind()]; jsType != "" {
-			p.Properties = make(map[string]Property, 0)
+			p.Properties = make(map[string]Property)
 			pn := &Property{}
 			pn.read(t.Elem())
 			p.Properties[".*"] = *pn
@@ -76,7 +76,7 @@ func (p *Property) read(t reflect.Type) {
 		}
 	case reflect.Struct:
 		p.Type = "object"
-		p.Properties = make(map[string]Property, 0)
+		p.Properties = make(map[string]Property)
 		p.AdditionalProperties = false
 
 		count := t.NumField()
